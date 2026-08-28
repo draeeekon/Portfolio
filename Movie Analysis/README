@@ -1,0 +1,306 @@
+# Movie Data Cleaning, Transformation & Analysis
+
+## Project Overview
+
+This project focuses on preparing and analysing a raw movie dataset using **PostgreSQL, SQL, and Power BI**.
+
+The dataset contained duplicate records, missing values, inconsistent data types, and columns stored in formats that were not suitable for analysis.
+
+SQL was used to **profile, clean, transform, and validate** the dataset while preserving the original raw data. The cleaned dataset was then imported into **Power BI** to investigate the relationship between movie ratings and commercial performance.
+
+### Main Analysis Question
+
+> **Do highly rated titles tend to generate more gross revenue?**
+
+---
+
+## Tools Used
+
+- PostgreSQL
+- SQL
+- Power BI
+- Supabase
+
+---
+
+## Dataset
+
+The dataset contains information about movies and TV shows, including:
+
+- Movie / show title
+- Year
+- Genre
+- Rating
+- Description
+- Director and cast information
+- Number of votes
+- Runtime
+- Gross revenue
+
+The original data was stored in the `movies` table.
+
+A separate `movies_clean` table was created for cleaning and transformation so that the original dataset remained unchanged.
+
+---
+
+## Data Profiling
+
+Before modifying the dataset, SQL queries were used to understand its structure and identify potential data quality issues.
+
+The profiling stage included:
+
+- Checking the total number of records
+- Identifying `NULL` values
+- Investigating patterns between missing fields
+- Detecting exact duplicate rows
+- Inspecting distinct values and formatting
+- Checking numeric fields for invalid values
+- Reviewing existing data types
+
+This allowed cleaning decisions to be based on actual issues found in the data rather than modifying values unnecessarily.
+
+---
+
+## Data Cleaning
+
+### 1. Duplicate Removal
+
+Exact duplicate rows were identified and removed from the cleaned dataset.
+
+The raw `movies` table was left unchanged so that the original data remained available for reference.
+
+### 2. Missing Values
+
+Missing values were investigated rather than automatically replaced.
+
+Missing information was found in fields including:
+
+- Year
+- Rating
+- Votes
+- Runtime
+- Gross revenue
+
+`NULL` values were retained when there was no reliable method of determining the missing value. This avoids introducing artificial or misleading data.
+
+### 3. Text Standardization
+
+Text fields were inspected for unnecessary whitespace and formatting inconsistencies.
+
+Functions such as `TRIM()` and `REPLACE()` were used where appropriate to standardize the data.
+
+---
+
+## Data Transformation
+
+Several columns were originally stored as text and required transformation before they could be used effectively for analysis.
+
+### Rating
+
+Ratings were converted from text to a numeric datatype.
+
+**Example:**
+
+`"8.7"` → `8.7`
+
+### Runtime
+
+Runtime values were converted into integers to allow numerical analysis.
+
+### Votes
+
+Vote counts contained comma separators and were originally stored as text.
+
+**Example:**
+
+`"885,805"` → `885805`
+
+The comma separators were removed and the resulting values were converted to integers.
+
+### Gross Revenue
+
+Gross revenue was originally stored as formatted text.
+
+**Example:**
+
+`"$75.47M"` → `75470000`
+
+A new `gross_usd` field was created containing numerical revenue values in USD.
+
+### Year
+
+The original year field contained multiple formats.
+
+**Examples:**
+
+- `(2020)`
+- `(2016–2021)`
+- `(2021– )`
+
+The field was transformed into two variables:
+
+- `start_year`
+- `end_year`
+
+This makes the year information easier to use for analysis.
+
+### Rating Bands
+
+A `rating_band` variable was created to group ratings into categories for comparison:
+
+- `< 6`
+- `6–7`
+- `7–8`
+- `8–9`
+- `9+`
+
+This allowed average gross revenue and sample sizes to be compared across different rating levels in Power BI.
+
+---
+
+## Final Validation
+
+After cleaning and transformation, validation queries were performed to confirm that the transformations had been applied correctly.
+
+| Metric | Result |
+|---|---:|
+| Total cleaned rows | 9,568 |
+| Unique movie titles | 6,423 |
+| Records with start year | 8,933 |
+| Records with end year | 5,104 |
+| Records with rating | 8,168 |
+| Records with votes | 8,168 |
+| Records with gross revenue | 460 |
+
+The relatively small number of records containing gross revenue reflects missing information in the original dataset rather than a transformation error.
+
+---
+
+## SQL Analysis
+
+After preparing the dataset, SQL was also used to quantify the relationship between movie ratings and gross revenue.
+
+### Rating and Revenue Correlation
+
+The Pearson correlation coefficient was calculated using PostgreSQL's `CORR()` function:
+
+```sql
+SELECT
+    CORR("RATING"::NUMERIC, gross_usd) AS rating_gross_correlation
+FROM movies_clean
+WHERE "RATING" IS NOT NULL
+  AND gross_usd IS NOT NULL;
+```
+
+**Result:**
+
+`0.1919`
+
+This indicates a **weak positive linear correlation** between movie rating and gross revenue.
+
+Higher-rated movies therefore tended to have somewhat higher gross revenue, but rating alone does not strongly explain differences in commercial performance.
+
+---
+
+## Power BI Analysis
+
+The cleaned dataset was imported into Power BI to visually investigate the relationship between ratings and gross revenue.
+
+The dashboard includes:
+
+### Summary Metrics
+
+- Average movie rating
+- Average gross revenue
+- Number of titles analysed
+
+### Average Gross Revenue by Rating
+
+Movies were grouped into rating bands and their average gross revenue was compared.
+
+The analysis showed an increase in average gross revenue across the observed rating groups:
+
+| Rating Band | Average Gross Revenue |
+|---|---:|
+| < 6 | ~$22M |
+| 6–7 | ~$42M |
+| 7–8 | ~$51M |
+| 8–9 | ~$86M |
+
+This suggests that higher-rated groups tended to generate greater average gross revenue.
+
+### Revenue-Reporting Titles by Rating Band
+
+The number of titles with available gross revenue was displayed alongside the average revenue analysis.
+
+This provides important context because the number of observations differs between rating groups.
+
+### Rating vs Gross Revenue
+
+A scatter plot was used to examine the relationship at the individual-title level.
+
+Although many of the highest-grossing titles received relatively high ratings, there was substantial variation in gross revenue among titles with similar ratings.
+
+This supports the correlation result and suggests that ratings alone are not a strong predictor of gross revenue.
+
+---
+
+## Key Findings
+
+- Higher-rated groups generally had higher **average gross revenue**.
+- Titles rated below 6 averaged approximately **$22M**, compared with approximately **$86M** for titles rated between 8 and 9.
+- The Pearson correlation between rating and gross revenue was only **0.19**, indicating a **weak positive relationship**.
+- The scatter plot showed substantial revenue variation among titles with similar ratings.
+- Therefore, higher ratings are associated with higher revenue in this dataset, but **rating alone is not a strong predictor of commercial performance**.
+
+---
+
+## Limitations
+
+Gross revenue was available for only a small subset of the dataset.
+
+Although the cleaned dataset contains 9,568 records, only approximately **460 records contained gross revenue information**, with **459 titles used in the Power BI revenue analysis**.
+
+Therefore, the findings should not be interpreted as representative of every title in the complete dataset.
+
+The analysis identifies **association rather than causation**. Factors such as production budget, marketing expenditure, franchise popularity, release strategy, genre, and distribution could also influence gross revenue but were not included in this analysis.
+
+---
+
+## SQL Workflow
+
+The SQL portion of the project is organized into three stages:
+
+```text
+├── DATA CLEANING
+└── DATA TRANSFORMATION
+```
+
+### `DATA CLEANING`
+
+Handles duplicate records, text inconsistencies, missing-value decisions, and other identified cleaning issues.
+
+### `DATA TRANSFORMATION`
+
+Converts columns into analysis-ready formats and creates derived variables such as `start_year`, `end_year`, `gross_usd`, and `rating_band`.
+
+---
+
+## Dashboard ![Movie Analysis Dashboard](images/movie_dashboard.png)
+
+The final Power BI dashboard investigates the relationship between movie ratings and gross revenue using:
+
+- KPI summary cards
+- Average gross revenue by rating band
+- Revenue-reporting title counts by rating band
+- Rating vs gross revenue scatter plot
+
+---
+
+## Conclusion
+
+The analysis found that **higher-rated movie groups tended to generate greater average gross revenue**, but the relationship was relatively weak.
+
+The Pearson correlation coefficient of **0.19**, together with the substantial spread visible in the scatter plot, indicates that movie rating alone explains little of the variation in gross revenue.
+
+The project demonstrates an end-to-end analytics workflow using **SQL for data profiling, cleaning, transformation, validation, and statistical analysis**, followed by **Power BI for interactive visualization and communication of findings**.

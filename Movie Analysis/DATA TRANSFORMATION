@@ -1,0 +1,165 @@
+-- Changing datatype for rating and runtime
+alter table movies_clean
+alter column "RATING" TYPE NUMERIC using "RATING"::NUMERIC;
+
+alter table movies_clean
+alter column "RunTime" TYPE INTEGER using "RunTime"::INTEGER;
+
+alter table movies_clean
+alter column "VOTES" TYPE INTEGER using REPLACE("VOTES", ',', '')::INTEGER;
+
+select
+  "Gross"
+from
+  movies_clean
+select
+  "Gross",
+  REPLACE(REPLACE(TRIM("Gross"), '$', ''), 'M', '')::NUMERIC * 1000000 as converted_gross
+from
+  movies_clean
+where
+  "Gross" is not null
+limit
+  20;
+
+-- Update movies_clean table converting into numeric
+update movies_clean
+set
+  gross_usd = REPLACE(REPLACE(TRIM("Gross"), '$', ''), 'M', '')::NUMERIC * 1000000
+where
+  "Gross" is not null;
+
+--check if it works
+select
+  COUNT(*) as total_rows,
+  COUNT("Gross") as original_gross_values,
+  COUNT(gross_usd) as converted_gross_values
+from
+  movies_clean;
+
+--clean and split year 
+alter table movies_clean
+add column start_year INTEGER,
+add column end_year INTEGER;
+
+-- update single year values first
+update movies_clean
+set
+  start_year = REPLACE(REPLACE("YEAR", '(', ''), ')', '')::INTEGER
+where
+  "YEAR" ~ '^\([0-9]{4}\)$';
+
+-- standardize text fields
+update movies_clean
+set
+  "GENRE" = TRIM("GENRE"),
+  "MOVIES" = TRIM("MOVIES");
+
+update movies_clean
+set
+  "GENRE" = TRIM(REPLACE("GENRE", E'\n', ' '));
+
+--validation
+select
+  MIN("RATING"),
+  MAX("RATING"),
+  MIN("RunTime"),
+  MAX("RunTime"),
+  MIN("VOTES"),
+  MAX("VOTES")
+from
+  movies_clean;
+
+select
+  *
+from
+  movies_clean
+limit
+  20;
+
+select
+  "YEAR",
+  SUBSTRING(
+    "YEAR"
+    from
+      '[0-9]{4}'
+  ) as extracted_start_year
+from
+  movies_clean
+where
+  "YEAR" is not null
+limit
+  30;
+
+--update start_year
+update movies_clean
+set
+  start_year = SUBSTRING(
+    "YEAR"
+    from
+      '[0-9]{4}'
+  )::INTEGER
+where
+  "YEAR" is not null;
+
+-- Update end_year with case when statements to differentiate ranges
+update movies_clean
+set
+  end_year = case
+  -- Single year: (2020)
+    when "YEAR" ~ '^\([0-9]{4}\)$' then SUBSTRING(
+      "YEAR"
+      from
+        '[0-9]{4}'
+    )::INTEGER
+    -- Closed range: (2016–2021)
+    when "YEAR" ~ '[0-9]{4}.*[0-9]{4}' then SUBSTRING(
+      "YEAR"
+      from
+        '[0-9]{4}[^0-9]+([0-9]{4})'
+    )::INTEGER
+    -- Ongoing series: (2021– )
+    else null
+  end
+where
+  "YEAR" is not null;
+
+--Validation
+select
+  "YEAR",
+  start_year,
+  end_year
+from
+  movies_clean
+where
+  "YEAR" is not null
+limit
+  50;
+
+-- Final validation
+select
+  COUNT(*) as total_rows,
+  COUNT(distinct "MOVIES") as unique_movies,
+  COUNT(start_year) as rows_with_start_year,
+  COUNT(end_year) as rows_with_end_year,
+  COUNT("RATING") as rows_with_rating,
+  COUNT("VOTES") as rows_with_votes,
+  COUNT(gross_usd) as rows_with_gross
+from
+  movies_clean;
+
+alter table movies_clean
+add column rating_band TEXT;
+
+-- set ratingband
+update movies_clean
+set
+  rating_band = case
+    when "RATING"::NUMERIC < 6 then '< 6'
+    when "RATING"::NUMERIC < 7 then '6-7'
+    when "RATING"::NUMERIC < 8 then '7-8'
+    when "RATING"::NUMERIC < 9 then '8-9'
+    else '9+'
+  end
+where
+  "RATING" is not null;
