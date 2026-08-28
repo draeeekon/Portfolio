@@ -1,0 +1,196 @@
+# Movie Data Cleaning & Transformation
+
+## Project Overview
+
+This project focuses on preparing a raw movie dataset for analysis and visualization using **PostgreSQL**.
+
+The dataset contained duplicate records, missing values, inconsistent data types, and columns stored in formats that were not suitable for analysis.
+
+SQL was used to **profile, clean, transform, and validate** the dataset while preserving the original raw data.
+
+The resulting `movies_clean` table is prepared for further analysis and visualization in **Power BI**.
+
+---
+
+## Tools Used
+
+- PostgreSQL
+- SQL
+- Power BI
+
+---
+
+## Dataset
+
+The dataset contains information about movies and TV shows, including:
+
+- Movie / show title
+- Year
+- Genre
+- Rating
+- Description
+- Director and cast information
+- Number of votes
+- Runtime
+- Gross revenue
+
+The original data was stored in the `movies` table.
+
+A separate `movies_clean` table was created for cleaning and transformation so that the original dataset remained unchanged.
+
+---
+
+## Data Profiling
+
+Before modifying the dataset, SQL queries were used to understand its structure and identify potential data quality issues.
+
+The profiling stage included:
+
+- Checking the total number of records
+- Identifying `NULL` values
+- Investigating patterns between missing fields
+- Detecting exact duplicate rows
+- Inspecting distinct values and formatting
+- Checking numeric fields for invalid values
+- Reviewing existing data types
+
+This allowed cleaning decisions to be based on actual issues found in the data rather than modifying values unnecessarily.
+
+---
+
+## Data Cleaning
+
+### 1. Duplicate Removal
+
+Exact duplicate rows were identified and removed from the cleaned dataset.
+
+The raw `movies` table was left unchanged so that the original data remained available for reference.
+
+### 2. Missing Values
+
+Missing values were investigated rather than automatically replaced.
+
+Missing information was found in fields including:
+
+- Year
+- Rating
+- Votes
+- Runtime
+- Gross revenue
+
+`NULL` values were retained when there was no reliable method of determining the missing value. This avoids introducing artificial or misleading data.
+
+### 3. Text Standardization
+
+Text fields were inspected for unnecessary whitespace and formatting inconsistencies.
+
+Functions such as `TRIM()` and `REPLACE()` were used where appropriate to standardize the data.
+
+---
+
+## Data Transformation
+
+Several columns were originally stored as text and required transformation before they could be used effectively for analysis.
+
+### Rating
+
+Ratings were converted from text to a numeric datatype.
+
+**Example:**
+
+`"8.7"` → `8.7`
+
+### Runtime
+
+Runtime values were converted into integers to allow numerical analysis.
+
+### Votes
+
+Vote counts contained comma separators and were originally stored as text.
+
+**Example:**
+
+`"885,805"` → `885805`
+
+The comma separators were removed and the resulting values were converted to integers.
+
+### Gross Revenue
+
+Gross revenue was originally stored as formatted text.
+
+**Example:**
+
+`"$75.47M"` → `75470000`
+
+A new `gross_usd` field was created containing numerical revenue values in USD.
+
+### Year
+
+The original year field contained multiple formats.
+
+**Examples:**
+
+- `(2020)`
+- `(2016–2021)`
+- `(2021– )`
+
+The field was transformed into two variables:
+
+- `start_year`
+- `end_year`
+
+This makes the year information easier to use for analysis.
+
+---
+
+## Final Validation
+
+After cleaning and transformation, validation queries were performed to confirm that the transformations had been applied correctly.
+
+| Metric | Result |
+|---|---:|
+| Total cleaned rows | 9,568 |
+| Unique movie titles | 6,423 |
+| Records with start year | 8,933 |
+| Records with end year | 5,104 |
+| Records with rating | 8,168 |
+| Records with votes | 8,168 |
+| Records with gross revenue | 460 |
+
+The relatively small number of records containing gross revenue reflects missing information in the original dataset rather than a transformation error.
+
+---
+
+## SQL Workflow
+
+The SQL portion of the project is organized into three stages:
+
+```text
+sql/
+├── 01_data_profiling.sql
+├── 02_data_cleaning.sql
+└── 03_data_transformation.sql
+```
+
+### `01_data_cleaning.sql`
+
+Handles duplicate records, text inconsistencies, and other identified cleaning issues.
+
+### `02_data_transformation.sql`
+
+Converts columns into analysis-ready formats and creates derived variables such as `start_year`, `end_year`, and `gross_usd`.
+
+---
+
+## Next Step: Power BI
+
+The cleaned and transformed dataset will be used in **Power BI** to explore:
+
+- Movie ratings
+- Genres
+- Release years
+- Audience engagement
+- Runtime
+- Commercial performance
+
+The final Power BI dashboard and key findings will be added to this repository once the analysis is complete.
