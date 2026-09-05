@@ -1,0 +1,5 @@
+Actual,Predicted,Count
+Legitimate,Legitimate,1495
+Legitimate,Fraud,32
+Fraud,Legitimate,29
+Fraud,Fraud,352
